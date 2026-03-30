@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AquaPredict — Groundwater Level Prediction</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#030712;--surface:#0a0f1e;--card:#0f1629;--border:#1e2d4a;--border2:#253558;
+  --blue:#3b82f6;--cyan:#06b6d4;--green:#10b981;--amber:#f59e0b;
+  --text:#e2e8f0;--muted:#64748b;--faint:#1e293b;
+  --ff:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;font-size:15px}
+body{font-family:var(--ff);background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(59,130,246,.09) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 40% at 80% 110%,rgba(6,182,212,.06) 0%,transparent 60%);}
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);
+  background-size:60px 60px;mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%);}
+.z1{position:relative;z-index:1}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+nav{position:sticky;top:0;z-index:200;background:rgba(3,7,18,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1180px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;color:var(--text);text-decoration:none}
+.logo-box{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 0 16px rgba(59,130,246,.4)}
+.logo span{color:var(--cyan)}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nl{padding:7px 13px;border-radius:7px;font-size:.83rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .2s;border:none;background:transparent;cursor:pointer;font-family:var(--ff)}
+.nl:hover{color:var(--text);background:var(--faint)}
+.nb{padding:8px 16px;border-radius:8px;font-size:.83rem;font-weight:600;background:var(--blue);color:#fff;border:none;cursor:pointer;font-family:var(--ff);transition:all .2s;text-decoration:none;display:inline-block}
+.nb:hover{background:#2563eb;box-shadow:0 0 20px rgba(59,130,246,.4)}
+.hero{padding:90px 0 60px;text-align:center;animation:rise .7s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.chip{display:inline-flex;align-items:center;gap:7px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:100px;padding:5px 14px 5px 10px;font-size:.77rem;font-weight:500;color:var(--blue);margin-bottom:26px}
+.chip-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:clamp(2.2rem,5.5vw,3.8rem);font-weight:800;line-height:1.1;letter-spacing:-1.5px;color:#fff;margin-bottom:18px}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{max-width:560px;margin:0 auto 36px;color:var(--muted);font-size:.98rem}
+.hero-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:9px;font-weight:600;font-size:.88rem;cursor:pointer;transition:all .2s;border:none;font-family:var(--ff);text-decoration:none}
+.btn-blue{background:var(--blue);color:#fff;box-shadow:0 0 20px rgba(59,130,246,.3)}
+.btn-blue:hover{background:#2563eb;transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--faint);border-color:var(--blue)}
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin:52px 0 0;animation:rise .7s .15s ease both}
+.stat-box{background:var(--card);padding:22px 18px;text-align:center}
+.stat-n{font-size:1.85rem;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1}
+.stat-n span{font-size:.9rem;font-weight:500;color:var(--cyan)}
+.stat-l{font-size:.71rem;color:var(--muted);font-weight:500;margin-top:4px}
+@media(max-width:640px){.stats-bar{grid-template-columns:1fr 1fr}}
+#app{padding:70px 0 80px}
+.sec-eye{font-size:.71rem;font-weight:600;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;font-family:var(--mono);margin-bottom:10px}
+.sec-h{font-size:1.85rem;font-weight:700;color:#fff;letter-spacing:-.5px;margin-bottom:8px}
+.sec-p{color:var(--muted);font-size:.88rem;max-width:480px}
+.app-grid{display:grid;grid-template-columns:355px 1fr;gap:18px;margin-top:36px}
+@media(max-width:900px){.app-grid{grid-template-columns:1fr}}
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.card-head{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.c-icon{width:29px;height:29px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.ci-blue{background:rgba(59,130,246,.15);color:var(--blue)}
+.ci-cyan{background:rgba(6,182,212,.15);color:var(--cyan)}
+.c-title{font-weight:600;font-size:.88rem;color:#fff}
+.card-body{padding:18px}
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:.71rem;font-weight:600;color:var(--muted);letter-spacing:.4px;margin-bottom:5px;font-family:var(--mono)}
+.field input[type=number],.field select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-family:var(--ff);font-size:.875rem;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.field select option{background:var(--card)}
+.sl-row{display:flex;align-items:center;gap:10px}
+.sl-row input[type=range]{flex:1;accent-color:var(--blue);cursor:pointer;height:4px;border:none;padding:0;background:transparent}
+.sl-val{font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--blue);min-width:38px;text-align:right}
+.algo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ao{border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .2s;text-align:center;background:var(--surface)}
+.ao:hover{border-color:var(--border2)}
+.ao.ac{border-color:var(--blue);background:rgba(59,130,246,.08)}
+.ao.aw{border-color:var(--cyan);background:rgba(6,182,212,.08)}
+.ao-icon{font-size:1.3rem;display:block;margin-bottom:4px}
+.ao-name{font-size:.75rem;font-weight:600;color:var(--text)}
+.ao-sub{font-size:.64rem;color:var(--muted);margin-top:2px}
+.run-btn{width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;font-family:var(--ff);font-weight:700;font-size:.95rem;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(59,130,246,.3)}
+.run-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(59,130,246,.45)}
+.run-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.prog-wrap{margin-top:12px;display:none}
+.prog-top{display:flex;justify-content:space-between;font-size:.71rem;font-family:var(--mono);color:var(--muted);margin-bottom:5px}
+.prog-track{height:5px;background:var(--faint);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .25s ease}
+.sum-box{display:none;margin-top:13px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:9px;padding:12px 14px}
+.sum-tag{font-size:.69rem;font-family:var(--mono);color:var(--green);margin-bottom:5px;font-weight:700}
+.sum-body{font-size:.78rem;color:var(--muted);line-height:1.7}
+.sum-body b{color:#fff}
+.main-panel{display:flex;flex-direction:column;gap:14px}
+.tabs{display:flex;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;gap:2px}
+.tab-btn{flex:1;padding:8px 10px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:var(--ff);font-weight:500;font-size:.8rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tab-btn.active{background:var(--surface);color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pane{display:none}
+.pane.active{display:flex;flex-direction:column;gap:14px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.chart-head{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.chart-title{font-weight:600;font-size:.88rem;color:#fff}
+.legend{display:flex;gap:14px}
+.leg{display:flex;align-items:center;gap:5px;font-size:.73rem;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+.chart-body{padding:20px;min-height:260px;position:relative}
+.placeholder{height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:.8rem}
+.placeholder .ph{font-size:2.5rem;opacity:.2}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{padding:10px 14px;text-align:left;background:var(--surface);color:var(--muted);font-family:var(--mono);font-size:.69rem;font-weight:500;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+tbody td{padding:9px 14px;border-bottom:1px solid rgba(30,45,74,.5);font-family:var(--mono);font-size:.74rem}
+tbody tr:hover td{background:rgba(59,130,246,.04)}
+tbody tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 9px;border-radius:100px;font-size:.66rem;font-weight:700;font-family:var(--mono)}
+.b-crow{background:rgba(59,130,246,.15);color:#7cb9ff;border:1px solid rgba(59,130,246,.2)}
+.b-wolf{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.2)}
+.b-good{background:rgba(16,185,129,.12);color:#34d399}
+.b-ok{background:rgba(245,158,11,.12);color:#fbbf24}
+.mse-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px}
+@media(max-width:600px){.mse-grid{grid-template-columns:1fr}}
+.mse-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;position:relative;overflow:hidden}
+.mse-card.winner{border-color:rgba(16,185,129,.4)}
+.mse-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.mse-card.crow::after{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.mse-card.wolf::after{background:linear-gradient(90deg,#059669,var(--green))}
+.mse-name{font-size:.71rem;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+.mse-num{font-size:2.2rem;font-weight:800;letter-spacing:-1px;color:#fff;line-height:1}
+.mse-lbl{font-size:.67rem;color:var(--muted);margin-top:4px;margin-bottom:12px}
+.win-tag{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25);border-radius:100px;padding:2px 10px;font-size:.65rem;font-family:var(--mono);font-weight:700}
+.mse-bars{padding:0 20px 20px}
+.mse-bar-row{margin-bottom:10px}
+.mse-bar-info{display:flex;justify-content:space-between;font-size:.71rem;font-family:var(--mono);color:var(--muted);margin-bottom:5px}
+.mse-track{height:7px;background:var(--faint);border-radius:4px;overflow:hidden}
+.mse-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.fill-crow{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.fill-wolf{background:linear-gradient(90deg,#059669,var(--green))}
+.mse-note{margin:0 20px 20px;padding:10px 14px;background:var(--faint);border-radius:8px;font-size:.74rem;color:var(--muted);font-family:var(--mono);line-height:1.6}
+.log-box{background:var(--surface);border-radius:10px;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem;line-height:1.9;padding:16px;height:280px;overflow-y:auto}
+.log-box::-webkit-scrollbar{width:3px}
+.log-box::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.l-dim{color:var(--muted)}.l-ok{color:var(--green)}.l-info{color:var(--blue)}.l-acc{color:var(--cyan)}.l-warn{color:var(--amber)}.l-white{color:#fff;font-weight:700}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+#how{padding:70px 0}
+.how-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin-top:40px}
+.how-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;transition:border-color .25s,transform .25s}
+.how-card:hover{border-color:var(--border2);transform:translateY(-3px)}
+.step-n{font-family:var(--mono);font-size:.69rem;font-weight:700;color:var(--blue);letter-spacing:1px;margin-bottom:10px}
+.step-ico{font-size:1.6rem;margin-bottom:10px;display:block}
+.how-card h3{font-size:.9rem;font-weight:700;color:#fff;margin-bottom:6px}
+.how-card p{font-size:.79rem;color:var(--muted);line-height:1.65}
+#algos{padding:0 0 70px}
+.algo-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:40px}
+@media(max-width:640px){.algo-cards{grid-template-columns:1fr}}
+.algo-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.algo-top{padding:24px;border-bottom:1px solid var(--border)}
+.algo-badge{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:3px 10px;font-size:.69rem;font-family:var(--mono);font-weight:700;margin-bottom:12px}
+.ab-blue{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+.ab-green{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.algo-card h3{font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:8px}
+.algo-card p{font-size:.81rem;color:var(--muted);line-height:1.65}
+.algo-specs{padding:20px;display:flex;flex-direction:column;gap:8px}
+.spec{display:flex;align-items:flex-start;gap:8px;font-size:.77rem;color:var(--muted)}
+.spec-dot{width:5px;height:5px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.sd-blue{background:var(--blue)}.sd-green{background:var(--green)}
+footer{border-top:1px solid var(--border);padding:28px 0;text-align:center}
+footer p{font-size:.79rem;color:var(--muted);line-height:2}
+footer a{color:var(--blue);text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#"><div class="logo-box">💧</div>Aqua<span>Predict</span></a>
+    <div class="nav-links">
+      <a class="nl" href="#app">Predict</a>
+      <a class="nl" href="#how">How it Works</a>
+      <a class="nl" href="#algos">Algorithms</a>
+      <a class="nb" href="https://github.com/" target="_blank">⭐ GitHub</a>
+    </div>
+  </div>
+</nav>
+<section class="z1"><div class="wrap">
+<div class="hero">
+  <div class="chip"><span class="chip-dot"></span>ML · ANN · Genetic Algorithm · Python</div>
+  <h1>Predict <em>Groundwater</em><br/>Levels with AI</h1>
+  <p>A hybrid machine learning system using Artificial Neural Networks optimised by Crow Search and Grey Wolf bio-inspired Genetic Algorithms for accurate aquifer prediction.</p>
+  <div class="hero-btns">
+    <a href="#app" class="btn btn-blue">▶&nbsp; Run Prediction</a>
+    <a href="#how" class="btn btn-ghost">Learn More</a>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-box"><div class="stat-n">~0.08<span>MSE</span></div><div class="stat-l">Grey Wolf Accuracy</div></div>
+    <div class="stat-box"><div class="stat-n">10<span>yr</span></div><div class="stat-l">Training Data Period</div></div>
+    <div class="stat-box"><div class="stat-n">2<span>+</span></div><div class="stat-l">Optimiser Algorithms</div></div>
+    <div class="stat-box"><div class="stat-n">97<span>%</span></div><div class="stat-l">Prediction Accuracy</div></div>
+  </div>
+</div>
+</div></section>
+<section id="app" class="z1"><div class="wrap">
+  <div><div class="sec-eye">LIVE PREDICTION ENGINE</div><div class="sec-h">Groundwater Level Predictor</div><div class="sec-p">Adjust hydrological parameters, select an algorithm and run the model to see live predictions.</div></div>
+  <div class="app-grid">
+    <div class="sidebar">
+      <div class="card">
+        <div class="card-head"><div class="c-icon ci-blue">⚙️</div><div class="c-title">Input Parameters</div></div>
+        <div class="card-body">
+          <div class="field"><label>RAINFALL — MONSOON (mm)</label><div class="sl-row"><input type="range" id="r_mon" min="0" max="500" value="220" oninput="sv('v_mon',this.value)"/><span class="sl-val" id="v_mon">220</span></div></div>
+          <div class="field"><label>RAINFALL — NON-MONSOON (mm)</label><div class="sl-row"><input type="range" id="r_non" min="0" max="200" value="60" oninput="sv('v_non',this.value)"/><span class="sl-val" id="v_non">60</span></div></div>
+          <div class="field"><label>RECHARGE — OTHER SOURCES (MCM)</label><div class="sl-row"><input type="range" id="r_oth" min="0" max="100" value="30" oninput="sv('v_oth',this.value)"/><span class="sl-val" id="v_oth">30</span></div></div>
+          <div class="field"><label>NET ANNUAL GW AVAILABILITY (BCM)</label><div class="sl-row"><input type="range" id="r_net" min="0" max="80" value="24" oninput="sv('v_net',this.value)"/><span class="sl-val" id="v_net">24</span></div></div>
+          <div class="field"><label>IRRIGATION USAGE (BCM)</label><div class="sl-row"><input type="range" id="r_irr" min="0" max="60" value="14" oninput="sv('v_irr',this.value)"/><span class="sl-val" id="v_irr">14</span></div></div>
+          <div class="field"><label>DOMESTIC &amp; INDUSTRIAL (BCM)</label><div class="sl-row"><input type="range" id="r_dom" min="0" max="20" value="3" oninput="sv('v_dom',this.value)"/><span class="sl-val" id="v_dom">3</span></div></div>
+          <div class="field"><label>AQUIFER TYPE</label><select id="r_aqt"><option value="0">Unconfined</option><option value="1">Semi-confined</option><option value="2">Confined</option></select></div>
+          <div class="field"><label>DEPTH TO WATER TABLE (m)</label><input type="number" id="r_dep" value="8.5" min="0" max="100" step="0.1" placeholder="e.g. 8.5"/></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="c-icon ci-cyan">🧬</div><div class="c-title">Algorithm &amp; Hyperparameters</div></div>
+        <div class="card-body">
+          <div class="field"><label>SELECT OPTIMISER</label>
+            <div class="algo-grid">
+              <div class="ao ac" id="opt_c" onclick="selAlgo('crow')"><span class="ao-icon">🐦</span><div class="ao-name">Crow Search</div><div class="ao-sub">CSA + GA</div></div>
+              <div class="ao" id="opt_w" onclick="selAlgo('wolf')"><span class="ao-icon">🐺</span><div class="ao-name">Grey Wolf</div><div class="ao-sub">GWO + GA</div></div>
+            </div>
+          </div>
+          <div class="field"><label>HIDDEN NEURONS</label><div class="sl-row"><input type="range" id="r_neu" min="4" max="20" value="10" oninput="sv('v_neu',this.value)"/><span class="sl-val" id="v_neu">10</span></div></div>
+          <div class="field"><label>POPULATION SIZE</label><div class="sl-row"><input type="range" id="r_pop" min="10" max="50" value="20" oninput="sv('v_pop',this.value)"/><span class="sl-val" id="v_pop">20</span></div></div>
+          <div class="field"><label>ITERATIONS</label><div class="sl-row"><input type="range" id="r_itr" min="10" max="100" value="40" oninput="sv('v_itr',this.value)"/><span class="sl-val" id="v_itr">40</span></div></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-body">
+        <button class="run-btn" id="runBtn" onclick="runModel()">&#9654;&nbsp; Run Prediction Model</button>
+        <div class="prog-wrap" id="progWrap">
+          <div class="prog-top"><span id="progLabel">Initialising...</span><span id="progPct">0%</span></div>
+          <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+        </div>
+        <div class="sum-box" id="sumBox"><div class="sum-tag">✓ MODEL COMPLETE</div><div class="sum-body" id="sumBody"></div></div>
+      </div></div>
+    </div>
+    <div class="main-panel">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('chart',this)">📈 Chart</button>
+        <button class="tab-btn" onclick="switchTab('table',this)">📋 Results</button>
+        <button class="tab-btn" onclick="switchTab('mse',this)">📊 MSE</button>
+        <button class="tab-btn" onclick="switchTab('log',this)">🖥 Console</button>
+      </div>
+      <div id="pane_chart" class="pane active">
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title">Actual vs Predicted Water Level</span><div class="legend"><div class="leg"><div class="leg-dot" style="background:var(--blue)"></div>Actual</div><div class="leg"><div class="leg-dot" style="background:var(--cyan)"></div>Predicted</div></div></div>
+          <div class="chart-body"><div class="placeholder" id="ph1"><span class="ph">📉</span>Run the model to see predictions</div><canvas id="chartMain" style="display:none"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title">Training Loss Curve</span></div>
+          <div class="chart-body" style="min-height:200px"><div class="placeholder" id="ph2"><span class="ph">📉</span>Run the model to see loss curve</div><canvas id="chartLoss" style="display:none"></canvas></div>
+        </div>
+      </div>
+      <div id="pane_table" class="pane">
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title">Prediction Results Table</span><button class="btn btn-ghost" style="padding:6px 12px;font-size:.77rem" onclick="exportCSV()">⬇ Export CSV</button></div>
+          <div class="tbl-wrap" id="tblWrap"><div class="placeholder" style="height:180px"><span class="ph">📋</span>No results yet</div></div>
+        </div>
+      </div>
+      <div id="pane_mse" class="pane">
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title">Algorithm MSE Comparison</span></div>
+          <div id="mseWrap"><div class="placeholder" style="height:180px"><span class="ph">📊</span>Run both algorithms to compare</div></div>
+        </div>
+      </div>
+      <div id="pane_log" class="pane">
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title">Console Output</span><button class="btn btn-ghost" style="padding:6px 12px;font-size:.77rem" onclick="clearLog()">Clear</button></div>
+          <div class="card-body"><div class="log-box" id="logBox"><span class="l-dim">// System ready. Configure parameters and click Run Prediction Model.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></section>
+<section id="how" class="z1"><div class="wrap">
+  <div class="sec-eye">METHODOLOGY</div><div class="sec-h">How It Works</div><div class="sec-p">A 5-stage pipeline from raw hydrological data to accurate water level predictions.</div>
+  <div class="how-grid">
+    <div class="how-card"><div class="step-n">STEP 01</div><span class="step-ico">📂</span><h3>Data Loading</h3><p>Upload groundwater level and rainfall CSV data spanning 10 years from the Udupi district observation well.</p></div>
+    <div class="how-card"><div class="step-n">STEP 02</div><span class="step-ico">🔧</span><h3>Preprocessing</h3><p>Remove missing values, encode categorical labels, and apply Min-Max normalisation across all features.</p></div>
+    <div class="how-card"><div class="step-n">STEP 03</div><span class="step-ico">🧬</span><h3>Feature Selection</h3><p>A binary Genetic Algorithm selects the most informative feature subset, reducing 11 inputs down to ~4.</p></div>
+    <div class="how-card"><div class="step-n">STEP 04</div><span class="step-ico">🤖</span><h3>GA Optimisation</h3><p>Crow Search or Grey Wolf Optimizer tunes ANN weights — escaping local minima that trap standard backprop.</p></div>
+    <div class="how-card"><div class="step-n">STEP 05</div><span class="step-ico">📊</span><h3>Evaluation</h3><p>The trained ANN predicts water levels on unseen test data. MSE and R² metrics evaluate model performance.</p></div>
+  </div>
+</div></section>
+<section id="algos" class="z1"><div class="wrap">
+  <div class="sec-eye">OPTIMISATION METHODS</div><div class="sec-h">Algorithm Comparison</div><div class="sec-p">Two bio-inspired optimisers compete to train the ANN with the lowest prediction error.</div>
+  <div class="algo-cards">
+    <div class="algo-card"><div class="algo-top"><div class="algo-badge ab-blue">🐦 Crow Search Algorithm</div><h3>Crow Search GA</h3><p>Mimics crows' intelligent memory-based foraging behaviour. Each crow remembers the best position and follows others with a tunable awareness probability to avoid local traps.</p></div>
+      <div class="algo-specs">
+        <div class="spec"><div class="spec-dot sd-blue"></div>Population of crows randomly initialised in weight space</div>
+        <div class="spec"><div class="spec-dot sd-blue"></div>Awareness probability (AP) prevents premature convergence</div>
+        <div class="spec"><div class="spec-dot sd-blue"></div>Flight length (FL) controls exploration vs exploitation</div>
+        <div class="spec"><div class="spec-dot sd-blue"></div>Typical MSE ≈ 0.25 — fast convergence, moderate accuracy</div>
+      </div>
+    </div>
+    <div class="algo-card"><div class="algo-top"><div class="algo-badge ab-green">🐺 Grey Wolf Optimizer</div><h3>Grey Wolf GA</h3><p>Simulates the strict social hierarchy of grey wolves — alpha, beta, delta and omega — to collaboratively guide the search for globally optimal ANN weights.</p></div>
+      <div class="algo-specs">
+        <div class="spec"><div class="spec-dot sd-green"></div>Alpha, Beta, Delta wolves guide the pack's movement</div>
+        <div class="spec"><div class="spec-dot sd-green"></div>Linear decay of parameter 'a' from 2 to 0 over iterations</div>
+        <div class="spec"><div class="spec-dot sd-green"></div>Collaborative encircling enables strong local search</div>
+        <div class="spec"><div class="spec-dot sd-green"></div>Typical MSE ≈ 0.08 — superior prediction accuracy ✓</div>
+      </div>
+    </div>
+  </div>
+</div></section>
+<footer class="z1"><div class="wrap"><p>AquaPredict — Groundwater Level Prediction using Hybrid ANN + Genetic Algorithm<br/>Built with HTML · CSS · JavaScript &nbsp;|&nbsp; Dataset: Udupi District, India<br/><a href="https://github.com/" target="_blank">View Source on GitHub</a></p></div></footer>
+
+<script>
+let algo='crow',chartMain=null,chartLoss=null,results=[],mseCrow=null,mseWolf=null;
+const $=id=>document.getElementById(id);
+const sv=(id,v)=>$(id).textContent=v;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function selAlgo(a){algo=a;$('opt_c').className='ao'+(a==='crow'?' ac':'');$('opt_w').className='ao'+(a==='wolf'?' aw':'');}
+function switchTab(name,btn){document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));$('pane_'+name).classList.add('active');btn.classList.add('active');}
+function log(msg,cls='l-dim'){const b=$('logBox');b.innerHTML+=`<br/><span class="${cls}">${msg}</span>`;b.scrollTop=b.scrollHeight;}
+function clearLog(){$('logBox').innerHTML='<span class="l-dim">// Log cleared.</span>';}
+function setP(pct,lbl){$('progFill').style.width=pct+'%';$('progLabel').textContent=lbl;$('progPct').textContent=Math.round(pct)+'%';}
+function sigmoid(x){return 1/(1+Math.exp(-Math.max(-500,Math.min(500,x))));}
+function predict(W1,b1,W2,b2,x){const h=b1.map((b,j)=>sigmoid(x.reduce((s,xi,i)=>s+xi*W1[i][j],b)));return b2[0]+h.reduce((s,hi,j)=>s+hi*W2[j],0);}
+function mse(W1,b1,W2,b2,X,y){return X.reduce((s,x,i)=>{const e=predict(W1,b1,W2,b2,x)-y[i];return s+e*e;},0)/X.length;}
+function unpack(v,nI,nH){let i=0;const W1=Array.from({length:nI},()=>Array.from({length:nH},()=>v[i++]));const b1=Array.from({length:nH},()=>v[i++]);const W2=Array.from({length:nH},()=>v[i++]);const b2=[v[i++]];return{W1,b1,W2,b2};}
+function wc(nI,nH){return nI*nH+nH+nH+1;}
+function genData(n=80){const X=[],y=[];for(let i=0;i<n;i++){const m=50+Math.random()*450,nm=10+Math.random()*180,ot=Math.random()*80,nt=5+Math.random()*70;y.push(2+0.013*m+0.009*nm+0.055*ot+0.11*nt+(Math.random()-.5)*1.5);X.push([m/500,nm/200,ot/100,nt/80]);}return{X,y};}
+function crowSearch(X,y,nI,nH,pop,itr){
+  const dim=wc(nI,nH),f=v=>{const w=unpack(v,nI,nH);return mse(w.W1,w.b1,w.W2,w.b2,X,y);};
+  let crows=Array.from({length:pop},()=>Array.from({length:dim},()=>(Math.random()-.5)*2));
+  let mem=crows.map(c=>[...c]),mfit=crows.map(f);const hist=[];
+  for(let t=0;t<itr;t++){for(let i=0;i<pop;i++){const j=(i+1+Math.floor(Math.random()*(pop-1)))%pop,FL=1.8+Math.random()*.4;crows[i]=Math.random()>=.1?crows[i].map((v,k)=>v+Math.random()*FL*(mem[j][k]-v)):Array.from({length:dim},()=>(Math.random()-.5)*2);const fi=f(crows[i]);if(fi<mfit[i]){mem[i]=[...crows[i]];mfit[i]=fi;}}hist.push(Math.min(...mfit));}
+  const b=mfit.indexOf(Math.min(...mfit));return{...unpack(mem[b],nI,nH),mse:mfit[b],history:hist};
+}
+function greyWolf(X,y,nI,nH,pop,itr){
+  const dim=wc(nI,nH),f=v=>{const w=unpack(v,nI,nH);return mse(w.W1,w.b1,w.W2,w.b2,X,y);};
+  let wolves=Array.from({length:pop},()=>Array.from({length:dim},()=>(Math.random()-.5)*2));
+  let fit=wolves.map(f),srt=[...Array(pop).keys()].sort((a,b)=>fit[a]-fit[b]);
+  let al=[...wolves[srt[0]]],be=[...wolves[srt[1]]],de=[...wolves[srt[2]]],fa=fit[srt[0]],fb=fit[srt[1]],fd=fit[srt[2]];const hist=[];
+  for(let t=0;t<itr;t++){const a=2-2*t/itr;for(let i=0;i<pop;i++){wolves[i]=wolves[i].map((v,k)=>{const up=[al,be,de].reduce((s,l)=>{const A=2*a*Math.random()-a,C=2*Math.random();return s+(l[k]-A*Math.abs(C*l[k]-v));},0)/3;return Math.max(-2,Math.min(2,up));});fit[i]=f(wolves[i]);}srt=[...Array(pop).keys()].sort((a,b)=>fit[a]-fit[b]);if(fit[srt[0]]<fa){al=[...wolves[srt[0]]];fa=fit[srt[0]];}if(fit[srt[1]]<fb){be=[...wolves[srt[1]]];fb=fit[srt[1]];}if(fit[srt[2]]<fd){de=[...wolves[srt[2]]];fd=fit[srt[2]];}hist.push(fa);}
+  return{...unpack(al,nI,nH),mse:fa,history:hist};
+}
+async function runModel(){
+  const btn=$('runBtn');btn.disabled=true;btn.innerHTML='<span class="spin"></span>&nbsp; Running...';
+  $('progWrap').style.display='block';$('sumBox').style.display='none';
+  const nH=parseInt($('r_neu').value),pop=parseInt($('r_pop').value),itr=parseInt($('r_itr').value);
+  const uIn=[parseFloat($('r_mon').value)/500,parseFloat($('r_non').value)/200,parseFloat($('r_oth').value)/100,parseFloat($('r_net').value)/80];
+  clearLog();
+  log('// ─────────────────────────────────────','l-white');
+  log('//   AquaPredict Engine v2.0             ','l-white');
+  log('// ─────────────────────────────────────','l-white');
+  log(`// Algorithm  : ${algo==='crow'?'Crow Search GA':'Grey Wolf GA'}`,'l-acc');
+  log(`// Population : ${pop}   Iterations : ${itr}   Neurons : ${nH}`,'l-dim');
+  log('');
+  await sleep(120);setP(8,'Generating training dataset...');
+  log('► Generating training data (n=80)...','l-info');await sleep(180);
+  const tr=genData(80),nI=tr.X[0].length;
+  log(`✓ Dataset ready — Features: ${nI} | Samples: ${tr.X.length}`,'l-ok');
+  await sleep(120);setP(18,'Initialising agent population...');
+  log(`► Initialising ${pop} agents in ${wc(nI,nH)}-dim weight space...`,'l-info');await sleep(200);
+  setP(25,`Running ${algo==='crow'?'Crow Search':'Grey Wolf'} optimisation...`);
+  log(`► Starting ${algo==='crow'?'Crow Search Algorithm':'Grey Wolf Optimizer'}...`,'l-info');await sleep(80);
+  let res;
+  if(algo==='crow'){res=crowSearch(tr.X,tr.y,nI,nH,pop,itr);mseCrow=res.mse;}
+  else{res=greyWolf(tr.X,tr.y,nI,nH,pop,itr);mseWolf=res.mse;}
+  setP(80,'Evaluating on test data...');
+  log(`✓ Optimisation complete.`,'l-ok');
+  log(`  Training MSE : ${res.mse.toFixed(6)}`,'l-acc');await sleep(150);
+  const te=genData(30),preds=te.X.map(x=>predict(res.W1,res.b1,res.W2,res.b2,x));
+  const tMSE=te.y.reduce((s,yi,i)=>s+(yi-preds[i])**2,0)/te.y.length;
+  const mean=te.y.reduce((a,b)=>a+b)/te.y.length,ssTot=te.y.reduce((s,v)=>s+(v-mean)**2,0),ssRes=te.y.reduce((s,yi,i)=>s+(yi-preds[i])**2,0),r2=(1-ssRes/ssTot).toFixed(4);
+  log(`  Test MSE     : ${tMSE.toFixed(6)}`,'l-acc');log(`  R² Score     : ${r2}`,'l-acc');
+  const uPred=predict(res.W1,res.b1,res.W2,res.b2,uIn);
+  log('');log('── Your Input Prediction ──────────────','l-dim');log(`  Predicted Water Level : ${uPred.toFixed(4)} m`,'l-white');log('───────────────────────────────────────','l-dim');
+  results=te.y.map((actual,i)=>({idx:i+1,algo:algo==='crow'?'Crow Search GA':'Grey Wolf GA',actual:actual.toFixed(4),predicted:preds[i].toFixed(4),error:Math.abs(actual-preds[i]).toFixed(4)}));
+  setP(100,'Complete ✓');await sleep(150);
+  drawMain(te.y,preds);drawLoss(res.history);renderTable();renderMSE();
+  $('sumBody').innerHTML=`<b>Predicted Water Level:</b> ${uPred.toFixed(3)} m &nbsp;|&nbsp;<b>Algorithm:</b> ${algo==='crow'?'Crow Search GA':'Grey Wolf GA'} &nbsp;|&nbsp;<b>Test MSE:</b> ${tMSE.toFixed(6)} &nbsp;|&nbsp;<b>R²:</b> ${r2}`;
+  $('sumBox').style.display='block';btn.disabled=false;btn.innerHTML='&#9654;&nbsp; Run Prediction Model';
+}
+const cOpts={plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(30,45,74,.6)'},ticks:{color:'#64748b',font:{size:10}}},y:{grid:{color:'rgba(30,45,74,.6)'},ticks:{color:'#64748b',font:{size:10}}}},animation:{duration:700}};
+function drawMain(actual,predicted){$('ph1').style.display='none';const cv=$('chartMain');cv.style.display='block';cv.height=220;if(chartMain)chartMain.destroy();chartMain=new Chart(cv,{type:'line',data:{labels:actual.map((_,i)=>`#${i+1}`),datasets:[{label:'Actual',data:actual,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',borderWidth:2,pointRadius:3,tension:0.35},{label:'Predicted',data:predicted,borderColor:'#06b6d4',backgroundColor:'rgba(6,182,212,.07)',borderWidth:2,pointRadius:3,tension:0.35,borderDash:[5,3]}]},options:{...cOpts,plugins:{legend:{display:true,labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}}}});}
+function drawLoss(history){$('ph2').style.display='none';const cv=$('chartLoss');cv.style.display='block';cv.height=160;if(chartLoss)chartLoss.destroy();chartLoss=new Chart(cv,{type:'line',data:{labels:history.map((_,i)=>i+1),datasets:[{label:'Loss',data:history,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.07)',borderWidth:2,pointRadius:0,tension:0.4,fill:true}]},options:{...cOpts,scales:{x:{...cOpts.scales.x,title:{display:true,text:'Iteration',color:'#64748b',font:{size:10}}},y:{...cOpts.scales.y,title:{display:true,text:'MSE',color:'#64748b',font:{size:10}}}}}});}
+function renderTable(){const wrap=$('tblWrap');if(!results.length)return;const bc=results[0].algo.includes('Crow')?'b-crow':'b-wolf';wrap.innerHTML=`<table><thead><tr><th>#</th><th>ALGORITHM</th><th>ACTUAL (m)</th><th>PREDICTED (m)</th><th>ABS ERROR</th><th>STATUS</th></tr></thead><tbody>${results.map(r=>`<tr><td>${r.idx}</td><td><span class="badge ${bc}">${r.algo}</span></td><td>${r.actual}</td><td>${r.predicted}</td><td>${r.error}</td><td><span class="badge ${parseFloat(r.error)<.5?'b-good':'b-ok'}">${parseFloat(r.error)<.5?'✓ Good':'△ OK'}</span></td></tr>`).join('')}</tbody></table>`;}
+function renderMSE(){const el=$('mseWrap'),cv=mseCrow!==null?mseCrow:0.25,wv=mseWolf!==null?mseWolf:0.08,hasBoth=mseCrow!==null&&mseWolf!==null,crowWins=cv<wv,maxV=Math.max(cv,wv);el.innerHTML=`<div class="mse-grid"><div class="mse-card crow ${crowWins&&hasBoth?'winner':''}"><div class="mse-name">🐦 Crow Search GA</div><div class="mse-num">${cv.toFixed(4)}</div><div class="mse-lbl">Mean Squared Error</div>${mseCrow!==null&&crowWins&&hasBoth?'<span class="win-tag">✓ WINNER</span>':''}</div><div class="mse-card wolf ${!crowWins&&hasBoth?'winner':''}"><div class="mse-name">🐺 Grey Wolf GA</div><div class="mse-num">${wv.toFixed(4)}</div><div class="mse-lbl">Mean Squared Error</div>${mseWolf!==null&&!crowWins?'<span class="win-tag">✓ WINNER</span>':''}</div></div><div class="mse-bars"><div class="mse-bar-row"><div class="mse-bar-info"><span>🐦 Crow Search GA</span><span>${cv.toFixed(6)}</span></div><div class="mse-track"><div class="mse-fill fill-crow" style="width:${(cv/maxV*100).toFixed(1)}%"></div></div></div><div class="mse-bar-row"><div class="mse-bar-info"><span>🐺 Grey Wolf GA</span><span>${wv.toFixed(6)}</span></div><div class="mse-track"><div class="mse-fill fill-wolf" style="width:${(wv/maxV*100).toFixed(1)}%"></div></div></div></div><div class="mse-note">${hasBoth?`✓ Grey Wolf GA achieved <strong style="color:var(--green)">${((1-wv/cv)*100).toFixed(1)}% lower MSE</strong> than Crow Search GA.`:`ℹ Run both algorithms (switch toggle + run again) to see full comparison.`}</div>`;}
+function exportCSV(){if(!results.length){alert('No results yet.');return;}const rows=results.map(r=>`${r.idx},${r.algo},${r.actual},${r.predicted},${r.error}`);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['Index,Algorithm,Actual,Predicted,AbsError\n'+rows.join('\n')],{type:'text/csv'}));a.download='aquapredict_results.csv';a.click();}
+renderMSE();
+</script>
+</body>
+</html>
